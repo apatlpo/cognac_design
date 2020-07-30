@@ -9,6 +9,8 @@ from bokeh.models import Range1d, Span
 import panel as pn
 #pn.extension('plotly')
 
+from graphviz import Graph
+
 rho0 = 1030 # kg/m3
 g = 9.81 # m/s^2
 MPa = 1e6 # Pa
@@ -32,7 +34,25 @@ _materials = {'alu_6061': {'density': 2700.,
                            'nu': 0.33,
                            'Re': 245*MPa,
                            'alpha': 2.33e-5,
-                           }
+                           },
+              'verre': {'density': 2230., 
+                        'E': 64000*MPa, 
+                        'nu': 0.2,
+                        'Re': 2000*MPa,
+                        'alpha': 3.30e-5,
+                        },
+              'pmma': {'density': 1200., 
+                       'E': 3300*MPa, 
+                       'nu': 0.35,
+                       'Re': 65*MPa,
+                       'alpha': 6.80e-5,
+                       },
+              'pom': {'density': 1410., 
+                      'E': 2800*MPa, 
+                      'nu': 0.35,
+                      'Re': 62*MPa,
+                      'alpha': 9.00e-5,
+                      },
               }
 
 _batteries = {'lsh20': {'long_name': 'lsh20 (D cell - lithium)',
@@ -546,3 +566,65 @@ def line(f, c, l, **kwargs):
                 }
     kdefault.update(kwargs)
     return f.line([],[], **kdefault)
+
+_part_colors = {'deployment': 'orange', 
+                'hull': 'cadetblue',
+                'piston': 'lightgreen',
+                'electronics': 'salmon',
+                'battery': 'lightgrey',
+               }
+
+def build_graph(f, name='float design'):
+        
+    # central graph
+    g = Graph(name)
+    #g.attr(compound='true') # to make subgraph: https://github.com/xflr6/graphviz/blob/master/examples/notebook.ipynb
+    g.attr(rankdir='RL', size='15,15')        
+
+    params = [p for p in f._params if p not in ['b_lithium', 'b_cell']]
+    for p in params:
+        part = f.get_part(p)
+        color = _part_colors[part]
+        g.attr('node', shape='ellipse', style='filled', color=color)
+        g.node(part+' '+'_'.join(p.split('_')[1:]))
+    
+    # gamma
+    #var = 'gamma'
+    #d.append(var)
+    #g.attr('node', shape='diamond', style='filled', color=self.deployment.color)
+    #g.node(var)
+    #g.edge(var, 'deployment delta_rho')
+
+    # piston radius
+    var = 'piston radius'
+    g.attr('node', shape='diamond', style='filled', color=_part_colors['piston'])
+    g.node(var)
+    for v in ['hull length', 'hull radius', 'piston length', 'deployment delta_rho']:
+        g.edge(var, v)
+
+    # piston conssumption
+    var = 'piston conssumption'
+    g.attr('node', shape='diamond', style='filled', color=_part_colors['piston'])
+    g.node(var)
+    for v in ['deployment depth', 'piston radius', 'piston speed', 'piston efficiency']:
+        g.edge(var, v)
+
+    # battery mass
+    var = 'battery mass'
+    g.attr('node', shape='diamond', style='filled', color=_part_colors['battery'])
+    g.node(var)
+    for v in ['piston conssumption', 'battery edensity', 'deployment T', 'electronics c']:
+        g.edge(var, v)
+
+    # volume
+    var = 'hull volume'
+    g.attr('node', shape='diamond', style='filled', color=_part_colors['hull'])
+    g.node(var)
+    for v in ['deployment delta_rho',  'hull density', 'hull radius', 'hull thickness',
+              'piston density',
+              'battery mass', 
+              'electronics mass',
+             ]:
+        g.edge(var, v)
+    
+    return g
