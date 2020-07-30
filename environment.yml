@@ -1,4 +1,4 @@
-name: cmaps
+name: bindermini
 channels:
   - conda-forge
   - pyviz
@@ -10,6 +10,3 @@ dependencies:
   - param=1.9.3
   - python=3.7.7
   - jupyter-panel-proxy
-  - scipy=1.4.1
-  - scikit-image=0.16.2
-  - colorcet=2.0.2
